@@ -1,0 +1,174 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+conda-env/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Model Files (LARGE - don't commit!)
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.pb
+*.onnx
+*.safetensors
+*.bin
+*.weights
+checkpoints/
+saved_models/
+models/*.pth
+models/*.pt
+outputs/model/
+
+# Datasets (LARGE - don't commit!)
+data/raw/
+data/processed/
+data/train/
+data/test/
+data/val/
+*.csv
+*.tsv
+*.json
+*.parquet
+*.feather
+*.hdf5
+*.h5
+datasets/
+*.tfrecord
+
+# Training Outputs
+logs/
+runs/
+wandb/
+tensorboard/
+mlruns/
+lightning_logs/
+outputs/
+results/
+experiments/
+*.log
+*.out
+
+# Model Checkpoints & Cache
+.cache/
+cache/
+huggingface_cache/
+transformers_cache/
+torch_cache/
+.torch/
+~/.cache/huggingface/
+
+# Large Image/Video Files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wav
+*.mp3
+
+# Compressed Files
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+secrets.yaml
+credentials.json
+*.key
+
+# Documentation Build
+docs/_build/
+site/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+
+# Temporary Files
+*.swp
+*.swo
+*~
+.tmp/
+tmp/
+temp/
+
+# Weights & Biases
+wandb/
+
+# MLflow
+mlruns/
+
+# DVC (Data Version Control)
+.dvc/
+
+# Annotations/Labels (if large)
+annotations/
+labels/
+
+# Custom (add your own)
+scratch/
+experiments/
+old/
+deprecated/
