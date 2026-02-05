@@ -1,0 +1,207 @@
+name: ML Fine-tuning CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.10'
+  CACHE_VERSION: v1
+
+jobs:
+  # Job 1: Code Quality & Linting
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install flake8 black isort pylint
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run Black (code formatter check)
+        run: black --check .
+
+      - name: Run isort (import sorting check)
+        run: isort --check-only .
+
+      - name: Run Flake8 (linting)
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+  # Job 2: Unit Tests
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pytest pytest-cov
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run unit tests with coverage
+        run: |
+          pytest tests/ --cov=src --cov-report=xml --cov-report=html
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  # Job 3: Model Training/Fine-tuning (on small dataset for validation)
+  model-validation:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Download sample dataset (if needed)
+        run: |
+          # Add your dataset download logic here
+          # Example: python scripts/download_data.py --sample
+          echo "Downloading sample dataset for validation..."
+
+      - name: Run quick fine-tuning validation
+        run: |
+          # This should be a quick training run on a small subset
+          # to verify the training pipeline works
+          python train.py --epochs 1 --batch-size 8 --validation-only
+        timeout-minutes: 15
+
+      - name: Validate model outputs
+        run: |
+          python scripts/validate_model.py
+
+  # Job 4: Full Training (only on main branch or manual trigger)
+  full-training:
+    runs-on: ubuntu-latest
+    needs: model-validation
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Configure GPU (if available)
+        run: |
+          # Check for GPU availability
+          python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+
+      - name: Download full dataset
+        run: |
+          # Add your full dataset download logic
+          python scripts/download_data.py --full
+
+      - name: Run full fine-tuning
+        run: |
+          python train.py --config configs/training_config.yaml
+        timeout-minutes: 120
+
+      - name: Evaluate model
+        run: |
+          python evaluate.py --model-path outputs/model
+
+      - name: Save model artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: fine-tuned-model
+          path: outputs/model/
+          retention-days: 30
+
+  # Job 5: Model Registry & Deployment
+  deploy-model:
+    runs-on: ubuntu-latest
+    needs: full-training
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download model artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: fine-tuned-model
+          path: outputs/model/
+
+      - name: Upload to Model Registry
+        run: |
+          # Example: Upload to Hugging Face Hub, MLflow, or AWS S3
+          # python scripts/upload_model.py --registry huggingface
+          echo "Uploading model to registry..."
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          # MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_URI }}
+
+      - name: Deploy to staging
+        run: |
+          # Add deployment logic (e.g., to SageMaker, Azure ML, or API endpoint)
+          echo "Deploying model to staging environment..."
+
+      - name: Run integration tests
+        run: |
+          python tests/integration/test_deployed_model.py
+
+  # Job 6: Performance Monitoring
+  performance-check:
+    runs-on: ubuntu-latest
+    needs: deploy-model
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check model performance metrics
+        run: |
+          # Compare new model performance with baseline
+          python scripts/check_performance.py --baseline outputs/baseline_metrics.json
+
+      - name: Alert on performance degradation
+        if: failure()
+        run: |
+          echo "⚠️ Model performance has degraded! Check metrics."
+          # Add Slack/Email notification here
